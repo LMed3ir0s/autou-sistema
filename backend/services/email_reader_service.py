@@ -1,6 +1,8 @@
 from fastapi import UploadFile, HTTPException, status
 from models.dto.request import EmailTextDTO
 import pdfplumber
+import logging
+from typing import Optional
 
 class EmailReaderService:
 
@@ -83,3 +85,34 @@ class EmailReaderService:
             )
 
         return joined
+    
+    async def process_input(
+            self,
+            file: Optional[UploadFile],
+            text: Optional[str],
+        ) -> EmailTextDTO:
+        logger = logging.getLogger(__name__)
+
+        if not file and not text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Envie arquivo OU texto, não ambos nem nenhum.",
+            )
+
+        if file and text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Envie apenas arquivo OU texto.",
+            )
+
+        if file:
+            logger.info(f"Processando arquivo: {file.filename}")
+            email_text = await self.from_upload(file)
+            logger.info(f"Arquivo lido ({len(email_text.content)} chars): {email_text.short_preview()}")
+            return email_text
+
+        #Se é texto
+        logger.info("Processando texto direto")
+        email_text = await self.from_text(text)
+        logger.info(f"Texto lido ({len(email_text.content)} chars): {email_text.short_preview()}")
+        return email_text
