@@ -15,7 +15,8 @@ router = APIRouter()
     summary="Classificar e-mail e sugerir resposta automática",
     response_model=ClassificationResultDTO
 )
-@limiter.limit("1/minute", "10/hour")
+@limiter.limit("1/minute")
+@limiter.limit("10/hour")
 async def classify_email(
     request: Request,
     file: Optional[UploadFile] = File(default=None),

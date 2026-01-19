@@ -6,17 +6,18 @@ from typing import Dict, Any
 from fastapi import HTTPException, status
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # logger do módulo [web:317]
 
 class OpenAIService:
     def __init__(self):
         self.client = AsyncOpenAI(api_key=settings.openai_api_key)
+        self.logger = logging.getLogger(self.__class__.__name__)  # <-- FIX [web:317]
 
     async def classify_and_reply(self, email: EmailTextDTO) -> ClassificationResultDTO:
         if not email.content:
             self.logger.error("EmailTextDTO sem conteúdo válido.")
             raise ValueError("EmailTextDTO sem conteúdo válido.")
-        
+
         self.logger.info(f"Classificando email [{email.source}]: {email.short_preview()}")
 
         prompt = self._build_prompt(email)
@@ -51,14 +52,13 @@ Email: "Feliz Natal e um ótimo 2026 para toda equipe!"
 Classificação: improdutivo  
 Resposta: "Obrigado pelo carinho! Feliz Natal também! 🎄"
 """
-
         return f"""Você é um classificador de emails para setor financeiro.
 
 CRITÉRIOS:
 - PRODUTIVO: requer ação, resposta específica, status, dúvida, arquivo, solicitação.
 - IMPRODUTIVO: saudações, feriados, spam, conversas informais.
 
-{ few_shots }
+{few_shots}
 
 Email a classificar:
 
@@ -91,7 +91,7 @@ Responda APENAS em JSON válido:
 
         try:
             parsed = json.loads(raw_response)
-            
+
             if "category" not in parsed:
                 raise ValueError("JSON sem campo 'category'")
             if parsed["category"] not in ["produtivo", "improdutivo"]:
@@ -100,7 +100,7 @@ Responda APENAS em JSON válido:
                 raise ValueError("Confidence inválido")
             if "reply" not in parsed or not parsed["reply"].strip():
                 raise ValueError("Resposta vazia")
-                
+
             return {
                 "category": parsed["category"],
                 "confidence": float(parsed["confidence"]),
